@@ -99,9 +99,9 @@ const Index = () => {
     // Get weights from each layer
     const layerWeights = currentModel.layers.map(layer => {
       const [weights] = layer.getWeights();
-      return weights.arraySync() as number[][];
+      return Array.from(weights.arraySync() as number[][]);
     });
-    setWeights(layerWeights);
+    setWeights(layerWeights.flat());
 
     // Get activations for current input
     const inputTensor = tf.tensor2d([[input1, input2]], [1, 2]);
@@ -113,13 +113,13 @@ const Index = () => {
     // Hidden layer activations
     const hiddenLayerOutput = tf.tidy(() => {
       const hidden = currentModel.layers[0].apply(inputTensor) as tf.Tensor;
-      return hidden.dataSync();
+      return Array.from(hidden.dataSync());
     });
-    layerOutputs.push(...Array.from(hiddenLayerOutput));
+    layerOutputs.push(...hiddenLayerOutput);
     
     // Output layer activation
     const prediction = currentModel.predict(inputTensor) as tf.Tensor;
-    const outputActivation = prediction.dataSync()[0];
+    const outputActivation = Array.from(prediction.dataSync())[0];
     layerOutputs.push(outputActivation);
     
     setActivations(layerOutputs);
