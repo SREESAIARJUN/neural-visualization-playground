@@ -87,7 +87,6 @@ const Index = () => {
         description: "Neural network has been trained successfully!",
       });
 
-      // Extract and flatten weights from each layer
       const extractedWeights = model.layers.map(layer => {
         const [weights] = layer.getWeights();
         return weights.arraySync() as number[][];
@@ -138,6 +137,17 @@ const Index = () => {
     });
   };
 
+  const addTrainingData = () => {
+    // Add current input state to training data
+    const prediction = model?.predict(tf.tensor2d([[input1, input2]], [1, 2])) as tf.Tensor;
+    const expectedOutput = generateTrainingData().ys.arraySync()[0][0];
+    
+    toast({
+      title: "Training Data Added",
+      description: `Added training pair: [${input1}, ${input2}] → ${expectedOutput}`,
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -157,6 +167,7 @@ const Index = () => {
             onOperationChange={setOperation}
             onTrain={trainNetwork}
             onReset={resetNetwork}
+            onAddTrainingData={addTrainingData}
             isTraining={isTraining}
           />
           
