@@ -28,12 +28,12 @@ const Index = () => {
           units: 3, 
           inputShape: [2], 
           activation: 'sigmoid',
-          kernelInitializer: 'randomNormal'
+          kernelInitializer: 'glorotNormal'
         }),
         tf.layers.dense({ 
           units: 1, 
           activation: 'sigmoid',
-          kernelInitializer: 'randomNormal'
+          kernelInitializer: 'glorotNormal'
         })
       ]
     });
@@ -86,7 +86,7 @@ const Index = () => {
         outputs = [0, 0, 1, 1];
         break;
       default:
-        outputs = [0, 0, 0, 1]; // Default to AND
+        outputs = [0, 0, 0, 1];
     }
     
     return {
@@ -137,20 +137,27 @@ const Index = () => {
     
     try {
       await model.fit(xs, ys, {
-        epochs: 100,
+        epochs: 1000,
+        batchSize: 4,
+        shuffle: true,
         callbacks: {
           onEpochEnd: async (epoch, logs) => {
             setEpochCount(epoch + 1);
-            setTrainingProgress(((epoch + 1) / 100) * 100);
+            setTrainingProgress(((epoch + 1) / 1000) * 100);
             setTrainingError(logs?.loss || 0);
             
             // Update visualization every few epochs
-            if (epoch % 5 === 0) {
+            if (epoch % 10 === 0) {
               await updateWeightsAndActivations(model);
             }
 
-            if (logs?.acc && logs.acc > 0.95) {
+            // Early stopping if accuracy is high enough
+            if (logs?.acc && logs.acc > 0.99) {
               model.stopTraining = true;
+              toast({
+                title: "Training Complete",
+                description: "Network achieved high accuracy!",
+              });
             }
           }
         }
@@ -193,7 +200,7 @@ const Index = () => {
 
   const addTrainingData = () => {
     const { ys } = generateTrainingData();
-    const expectedOutput = ys.arraySync()[0][0];
+    const expectedOutput = Array.from(ys.dataSync())[0];
     
     toast({
       title: "Training Data Added",
@@ -203,7 +210,6 @@ const Index = () => {
     ys.dispose();
   };
 
-  // Update activations whenever inputs change
   useEffect(() => {
     if (model) {
       updateWeightsAndActivations(model);
@@ -218,7 +224,7 @@ const Index = () => {
             Neural Network Visualization
           </h1>
           <p className="text-lg text-gray-600">
-            Train a neural network to learn logical operations
+            Interactive visualization of neural network training for logical operations
           </p>
         </div>
 
@@ -236,15 +242,13 @@ const Index = () => {
             trainingError={trainingError}
           />
           
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <NetworkVisualization
-              weights={weights}
-              activations={activations}
-              epochCount={epochCount}
-              error={trainingError}
-              isTraining={isTraining}
-            />
-          </div>
+          <NetworkVisualization
+            weights={weights}
+            activations={activations}
+            epochCount={epochCount}
+            error={trainingError}
+            isTraining={isTraining}
+          />
         </div>
       </div>
     </div>

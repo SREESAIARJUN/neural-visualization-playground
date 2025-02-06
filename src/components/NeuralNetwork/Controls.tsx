@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 interface ControlsProps {
   onInput1Change: (value: number) => void;
@@ -37,7 +38,14 @@ const Controls: React.FC<ControlsProps> = ({
   return (
     <Card className="space-y-6 p-6">
       <div className="space-y-4">
-        <h2 className="text-2xl font-bold text-gray-900">Network Controls</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-gray-900">Network Controls</h2>
+          {isTraining && (
+            <Badge variant="secondary" className="animate-pulse">
+              Training in Progress
+            </Badge>
+          )}
+        </div>
         
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700">Input 1</label>
@@ -80,15 +88,23 @@ const Controls: React.FC<ControlsProps> = ({
         </div>
 
         {isTraining && (
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Training Progress</span>
-              <span>{trainingProgress.toFixed(1)}%</span>
+          <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium">Training Progress</span>
+              <span className="text-sm font-medium">{trainingProgress.toFixed(1)}%</span>
             </div>
-            <Progress value={trainingProgress} />
-            <div className="flex justify-between text-sm text-gray-500">
-              <span>Epoch: {epochCount}</span>
-              <span>Error: {trainingError.toFixed(4)}</span>
+            <Progress value={trainingProgress} className="h-2" />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white p-3 rounded-md shadow-sm">
+                <div className="text-sm text-gray-500">Epoch</div>
+                <div className="text-lg font-bold">{epochCount}</div>
+              </div>
+              <div className="bg-white p-3 rounded-md shadow-sm">
+                <div className="text-sm text-gray-500">Error</div>
+                <div className={`text-lg font-bold ${trainingError < 0.1 ? 'text-green-600' : 'text-red-600'}`}>
+                  {trainingError.toFixed(4)}
+                </div>
+              </div>
             </div>
           </div>
         )}
