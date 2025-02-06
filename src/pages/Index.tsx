@@ -87,11 +87,13 @@ const Index = () => {
         description: "Neural network has been trained successfully!",
       });
 
-      // Update visualization
-      const weights = model.layers.map(layer => 
-        layer.getWeights()[0].arraySync() as number[][]
-      );
-      setWeights(weights);
+      // Extract and flatten weights from each layer
+      const extractedWeights = model.layers.map(layer => {
+        const [weights] = layer.getWeights();
+        return weights.arraySync() as number[][];
+      }).flat();
+
+      setWeights(extractedWeights);
       
       // Predict current inputs
       const prediction = model.predict(tf.tensor2d([[input1, input2]], [1, 2])) as tf.Tensor;
