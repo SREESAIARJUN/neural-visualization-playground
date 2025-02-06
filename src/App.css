@@ -47,6 +47,7 @@
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   padding: 1rem;
+  margin: 1rem 0;
 }
 
 .neuron {
@@ -82,6 +83,14 @@
   }
 }
 
+.neuron-group:hover .neuron {
+  filter: brightness(1.2);
+}
+
+.layer-label:hover text {
+  fill: var(--neural-primary);
+}
+
 /* Neural Network Theme Colors */
 :root {
   --neural-primary: #2196F3;
@@ -90,4 +99,15 @@
   --neural-error: #f44336;
   --neural-neuron: #e0e0e0;
   --neural-connection: #9e9e9e;
+}
+
+/* Training Animation */
+@keyframes training-pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
+.training-active {
+  animation: training-pulse 1s infinite;
 }

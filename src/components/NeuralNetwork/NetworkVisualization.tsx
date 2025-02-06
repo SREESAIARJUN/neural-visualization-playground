@@ -1,12 +1,22 @@
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
+import { Tooltip } from "@/components/ui/tooltip";
 
 interface NetworkVisualizationProps {
   weights: number[][];
   activations: number[];
+  epochCount?: number;
+  error?: number;
+  isTraining?: boolean;
 }
 
-const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({ weights, activations }) => {
+const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({ 
+  weights, 
+  activations, 
+  epochCount = 0,
+  error = 0,
+  isTraining = false 
+}) => {
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
@@ -38,7 +48,7 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({ weights, ac
       }
     });
 
-    // Draw connections with weight-based styling
+    // Draw connections with weight-based styling and animations
     const connections = svg.append("g");
     nodes.forEach((node, i) => {
       if (node.layer < layers.length - 1) {
@@ -61,25 +71,29 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({ weights, ac
       }
     });
 
-    // Draw nodes with activation visualization
+    // Draw nodes with enhanced visualization
     const nodeGroup = svg.append("g");
     nodes.forEach((node, i) => {
       const activation = activations[i] || 0;
       const nodeColor = d3.interpolateRgb("#e0e0e0", "#2196F3")(activation);
       
+      // Neuron body
+      const neuronGroup = nodeGroup.append("g")
+        .attr("class", "neuron-group")
+        .style("cursor", "pointer");
+
       // Outer circle (neuron body)
-      nodeGroup.append("circle")
+      neuronGroup.append("circle")
         .attr("cx", node.x)
         .attr("cy", node.y)
         .attr("r", nodeRadius)
         .attr("fill", nodeColor)
         .attr("stroke", "#1976D2")
         .attr("stroke-width", 2)
-        .attr("class", "neuron")
-        .style("transition", "all 0.3s ease-in-out");
+        .attr("class", `neuron ${isTraining ? 'animate-pulse' : ''}`);
 
       // Activation value text
-      nodeGroup.append("text")
+      neuronGroup.append("text")
         .attr("x", node.x)
         .attr("y", node.y)
         .attr("dy", "0.35em")
@@ -90,7 +104,7 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({ weights, ac
 
       // Add pulse animation for active neurons
       if (activation > 0.5) {
-        nodeGroup.append("circle")
+        neuronGroup.append("circle")
           .attr("cx", node.x)
           .attr("cy", node.y)
           .attr("r", nodeRadius)
@@ -101,10 +115,14 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({ weights, ac
       }
     });
 
-    // Add layer labels
+    // Add layer labels with tooltips
     const labels = ["Input", "Hidden", "Output"];
     labels.forEach((label, i) => {
-      svg.append("text")
+      const labelGroup = svg.append("g")
+        .attr("class", "layer-label")
+        .style("cursor", "help");
+
+      labelGroup.append("text")
         .attr("x", layerSpacing + (i * layerSpacing))
         .attr("y", 30)
         .attr("text-anchor", "middle")
@@ -114,7 +132,18 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({ weights, ac
         .text(label);
     });
 
-  }, [weights, activations]);
+    // Add training info if training is active
+    if (isTraining) {
+      svg.append("text")
+        .attr("x", width - 10)
+        .attr("y", 30)
+        .attr("text-anchor", "end")
+        .attr("fill", "#666")
+        .attr("font-size", "12px")
+        .text(`Epoch: ${epochCount} | Error: ${error.toFixed(4)}`);
+    }
+
+  }, [weights, activations, epochCount, error, isTraining]);
 
   return (
     <div className="network-visualization">

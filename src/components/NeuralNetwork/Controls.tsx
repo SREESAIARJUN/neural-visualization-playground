@@ -1,6 +1,8 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
+import { Card } from "@/components/ui/card";
 
 interface ControlsProps {
   onInput1Change: (value: number) => void;
@@ -8,7 +10,11 @@ interface ControlsProps {
   onOperationChange: (operation: string) => void;
   onTrain: () => void;
   onReset: () => void;
+  onAddTrainingData: () => void;
   isTraining: boolean;
+  epochCount?: number;
+  trainingProgress?: number;
+  trainingError?: number;
 }
 
 const Controls: React.FC<ControlsProps> = ({
@@ -17,10 +23,19 @@ const Controls: React.FC<ControlsProps> = ({
   onOperationChange,
   onTrain,
   onReset,
-  isTraining
+  onAddTrainingData,
+  isTraining,
+  epochCount = 0,
+  trainingProgress = 0,
+  trainingError = 0
 }) => {
+  const operations = [
+    'AND', 'OR', 'XOR', 'NAND', 'NOR', 'XNOR', 
+    'IMPLIES', 'NIMPLIES', 'NOT', 'BUFFER'
+  ];
+
   return (
-    <div className="space-y-6 p-6 bg-white rounded-lg shadow-sm">
+    <Card className="space-y-6 p-6">
       <div className="space-y-4">
         <h2 className="text-2xl font-bold text-gray-900">Network Controls</h2>
         
@@ -57,17 +72,29 @@ const Controls: React.FC<ControlsProps> = ({
               <SelectValue placeholder="Select operation" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="AND">AND</SelectItem>
-              <SelectItem value="OR">OR</SelectItem>
-              <SelectItem value="XOR">XOR</SelectItem>
-              <SelectItem value="NAND">NAND</SelectItem>
-              <SelectItem value="NOR">NOR</SelectItem>
+              {operations.map((op) => (
+                <SelectItem key={op} value={op}>{op}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
+
+        {isTraining && (
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span>Training Progress</span>
+              <span>{trainingProgress.toFixed(1)}%</span>
+            </div>
+            <Progress value={trainingProgress} />
+            <div className="flex justify-between text-sm text-gray-500">
+              <span>Epoch: {epochCount}</span>
+              <span>Error: {trainingError.toFixed(4)}</span>
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="space-x-4">
+      <div className="flex flex-wrap gap-4">
         <Button 
           onClick={onTrain}
           disabled={isTraining}
@@ -76,13 +103,21 @@ const Controls: React.FC<ControlsProps> = ({
           {isTraining ? "Training..." : "Train Network"}
         </Button>
         <Button 
+          onClick={onAddTrainingData}
+          disabled={isTraining}
+          variant="outline"
+        >
+          Add Training Data
+        </Button>
+        <Button 
           onClick={onReset}
           variant="outline"
+          className="text-red-500 hover:text-red-700"
         >
           Reset
         </Button>
       </div>
-    </div>
+    </Card>
   );
 };
 
