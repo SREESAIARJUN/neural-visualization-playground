@@ -12,14 +12,29 @@ const Index = () => {
   const [isTraining, setIsTraining] = useState(false);
   const [weights, setWeights] = useState<number[][]>([]);
   const [activations, setActivations] = useState<number[]>([]);
+  const [epochCount, setEpochCount] = useState(0);
+  const [trainingProgress, setTrainingProgress] = useState(0);
+  const [trainingError, setTrainingError] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Initialize model
+    initializeModel();
+  }, []);
+
+  const initializeModel = () => {
     const newModel = tf.sequential({
       layers: [
-        tf.layers.dense({ units: 3, inputShape: [2], activation: 'sigmoid' }),
-        tf.layers.dense({ units: 1, activation: 'sigmoid' })
+        tf.layers.dense({ 
+          units: 3, 
+          inputShape: [2], 
+          activation: 'sigmoid',
+          kernelInitializer: 'randomNormal'
+        }),
+        tf.layers.dense({ 
+          units: 1, 
+          activation: 'sigmoid',
+          kernelInitializer: 'randomNormal'
+        })
       ]
     });
     
@@ -30,7 +45,8 @@ const Index = () => {
     });
 
     setModel(newModel);
-  }, []);
+    updateWeightsAndActivations(newModel);
+  };
 
   const generateTrainingData = () => {
     const inputs: number[][] = [
@@ -54,6 +70,21 @@ const Index = () => {
       case 'NOR':
         outputs = [1, 0, 0, 0];
         break;
+      case 'XNOR':
+        outputs = [1, 0, 0, 1];
+        break;
+      case 'IMPLIES':
+        outputs = [1, 1, 0, 1];
+        break;
+      case 'NIMPLIES':
+        outputs = [0, 0, 1, 0];
+        break;
+      case 'NOT':
+        outputs = [1, 1, 0, 0];
+        break;
+      case 'BUFFER':
+        outputs = [0, 0, 1, 1];
+        break;
       default:
         outputs = [0, 0, 0, 1]; // Default to AND
     }
@@ -62,6 +93,40 @@ const Index = () => {
       xs: tf.tensor2d(inputs),
       ys: tf.tensor2d(outputs, [4, 1])
     };
+  };
+
+  const updateWeightsAndActivations = async (currentModel: tf.Sequential) => {
+    // Get weights from each layer
+    const layerWeights = currentModel.layers.map(layer => {
+      const [weights] = layer.getWeights();
+      return weights.arraySync() as number[][];
+    });
+    setWeights(layerWeights);
+
+    // Get activations for current input
+    const inputTensor = tf.tensor2d([[input1, input2]], [1, 2]);
+    const layerOutputs: number[] = [];
+    
+    // Input layer activations
+    layerOutputs.push(input1, input2);
+    
+    // Hidden layer activations
+    const hiddenLayerOutput = tf.tidy(() => {
+      const hidden = currentModel.layers[0].apply(inputTensor) as tf.Tensor;
+      return hidden.dataSync();
+    });
+    layerOutputs.push(...Array.from(hiddenLayerOutput));
+    
+    // Output layer activation
+    const prediction = currentModel.predict(inputTensor) as tf.Tensor;
+    const outputActivation = prediction.dataSync()[0];
+    layerOutputs.push(outputActivation);
+    
+    setActivations(layerOutputs);
+    
+    // Cleanup tensors
+    inputTensor.dispose();
+    prediction.dispose();
   };
 
   const trainNetwork = async () => {
@@ -74,7 +139,16 @@ const Index = () => {
       await model.fit(xs, ys, {
         epochs: 100,
         callbacks: {
-          onEpochEnd: (epoch, logs) => {
+          onEpochEnd: async (epoch, logs) => {
+            setEpochCount(epoch + 1);
+            setTrainingProgress(((epoch + 1) / 100) * 100);
+            setTrainingError(logs?.loss || 0);
+            
+            // Update visualization every few epochs
+            if (epoch % 5 === 0) {
+              await updateWeightsAndActivations(model);
+            }
+
             if (logs?.acc && logs.acc > 0.95) {
               model.stopTraining = true;
             }
@@ -87,17 +161,7 @@ const Index = () => {
         description: "Neural network has been trained successfully!",
       });
 
-      const extractedWeights = model.layers.map(layer => {
-        const [weights] = layer.getWeights();
-        return weights.arraySync() as number[][];
-      }).flat();
-
-      setWeights(extractedWeights);
-      
-      // Predict current inputs
-      const prediction = model.predict(tf.tensor2d([[input1, input2]], [1, 2])) as tf.Tensor;
-      const activationValue = prediction.dataSync()[0];
-      setActivations([input1, input2, activationValue]);
+      await updateWeightsAndActivations(model);
 
     } catch (error) {
       toast({
@@ -107,29 +171,19 @@ const Index = () => {
       });
     } finally {
       setIsTraining(false);
+      xs.dispose();
+      ys.dispose();
     }
   };
 
   const resetNetwork = () => {
-    if (!model) return;
-    
-    model.dispose();
-    const newModel = tf.sequential({
-      layers: [
-        tf.layers.dense({ units: 3, inputShape: [2], activation: 'sigmoid' }),
-        tf.layers.dense({ units: 1, activation: 'sigmoid' })
-      ]
-    });
-    
-    newModel.compile({
-      optimizer: tf.train.adam(0.1),
-      loss: 'binaryCrossentropy',
-      metrics: ['accuracy'],
-    });
-
-    setModel(newModel);
-    setWeights([]);
-    setActivations([]);
+    if (model) {
+      model.dispose();
+    }
+    setEpochCount(0);
+    setTrainingProgress(0);
+    setTrainingError(0);
+    initializeModel();
     
     toast({
       title: "Network Reset",
@@ -138,15 +192,23 @@ const Index = () => {
   };
 
   const addTrainingData = () => {
-    // Add current input state to training data
-    const prediction = model?.predict(tf.tensor2d([[input1, input2]], [1, 2])) as tf.Tensor;
-    const expectedOutput = generateTrainingData().ys.arraySync()[0][0];
+    const { ys } = generateTrainingData();
+    const expectedOutput = ys.arraySync()[0][0];
     
     toast({
       title: "Training Data Added",
       description: `Added training pair: [${input1}, ${input2}] → ${expectedOutput}`,
     });
+
+    ys.dispose();
   };
+
+  // Update activations whenever inputs change
+  useEffect(() => {
+    if (model) {
+      updateWeightsAndActivations(model);
+    }
+  }, [input1, input2, operation]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -169,12 +231,18 @@ const Index = () => {
             onReset={resetNetwork}
             onAddTrainingData={addTrainingData}
             isTraining={isTraining}
+            epochCount={epochCount}
+            trainingProgress={trainingProgress}
+            trainingError={trainingError}
           />
           
           <div className="bg-white p-6 rounded-lg shadow-sm">
             <NetworkVisualization
               weights={weights}
               activations={activations}
+              epochCount={epochCount}
+              error={trainingError}
+              isTraining={isTraining}
             />
           </div>
         </div>
