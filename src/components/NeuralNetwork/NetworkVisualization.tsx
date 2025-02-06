@@ -38,50 +38,93 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({ weights, ac
       }
     });
 
-    // Draw connections
+    // Draw connections with weight-based styling
     const connections = svg.append("g");
     nodes.forEach((node, i) => {
       if (node.layer < layers.length - 1) {
         const nextLayer = nodes.filter(n => n.layer === node.layer + 1);
-        nextLayer.forEach(nextNode => {
+        nextLayer.forEach((nextNode, j) => {
+          const weight = weights[node.layer]?.[i * nextLayer.length + j] || 0;
+          const weightStrength = Math.abs(weight);
+          
           connections.append("line")
             .attr("x1", node.x)
             .attr("y1", node.y)
             .attr("x2", nextNode.x)
             .attr("y2", nextNode.y)
-            .attr("stroke", "var(--neural-connection)")
-            .attr("stroke-width", 2)
-            .attr("opacity", 0.6);
+            .attr("stroke", weight > 0 ? "#4CAF50" : "#f44336")
+            .attr("stroke-width", Math.max(1, weightStrength * 3))
+            .attr("opacity", 0.6)
+            .attr("class", "connection-line")
+            .style("transition", "all 0.3s ease-in-out");
         });
       }
     });
 
-    // Draw nodes
+    // Draw nodes with activation visualization
     const nodeGroup = svg.append("g");
     nodes.forEach((node, i) => {
-      const circle = nodeGroup.append("circle")
+      const activation = activations[i] || 0;
+      const nodeColor = d3.interpolateRgb("#e0e0e0", "#2196F3")(activation);
+      
+      // Outer circle (neuron body)
+      nodeGroup.append("circle")
         .attr("cx", node.x)
         .attr("cy", node.y)
         .attr("r", nodeRadius)
-        .attr("fill", "var(--neural-neuron)")
-        .attr("stroke", "var(--neural-primary)")
+        .attr("fill", nodeColor)
+        .attr("stroke", "#1976D2")
         .attr("stroke-width", 2)
-        .attr("class", "transition-all duration-300 ease-in-out");
+        .attr("class", "neuron")
+        .style("transition", "all 0.3s ease-in-out");
 
-      if (activations[i]) {
-        circle.classed("animate-neuron-pulse", true);
+      // Activation value text
+      nodeGroup.append("text")
+        .attr("x", node.x)
+        .attr("y", node.y)
+        .attr("dy", "0.35em")
+        .attr("text-anchor", "middle")
+        .attr("fill", "#fff")
+        .attr("font-size", "12px")
+        .text(activation.toFixed(2));
+
+      // Add pulse animation for active neurons
+      if (activation > 0.5) {
+        nodeGroup.append("circle")
+          .attr("cx", node.x)
+          .attr("cy", node.y)
+          .attr("r", nodeRadius)
+          .attr("fill", "none")
+          .attr("stroke", "#2196F3")
+          .attr("stroke-width", 2)
+          .attr("class", "pulse-ring");
       }
+    });
+
+    // Add layer labels
+    const labels = ["Input", "Hidden", "Output"];
+    labels.forEach((label, i) => {
+      svg.append("text")
+        .attr("x", layerSpacing + (i * layerSpacing))
+        .attr("y", 30)
+        .attr("text-anchor", "middle")
+        .attr("fill", "#666")
+        .attr("font-size", "14px")
+        .attr("font-weight", "bold")
+        .text(label);
     });
 
   }, [weights, activations]);
 
   return (
-    <svg 
-      ref={svgRef}
-      className="w-full h-full"
-      viewBox="0 0 600 400"
-      preserveAspectRatio="xMidYMid meet"
-    />
+    <div className="network-visualization">
+      <svg 
+        ref={svgRef}
+        className="w-full h-full"
+        viewBox="0 0 600 400"
+        preserveAspectRatio="xMidYMid meet"
+      />
+    </div>
   );
 };
 

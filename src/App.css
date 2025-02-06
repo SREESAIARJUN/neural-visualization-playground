@@ -40,3 +40,54 @@
 .read-the-docs {
   color: #888;
 }
+
+/* Neural Network Visualization Styles */
+.network-visualization {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  padding: 1rem;
+}
+
+.neuron {
+  transition: all 0.3s ease-in-out;
+}
+
+.neuron:hover {
+  filter: brightness(1.2);
+  cursor: pointer;
+}
+
+.connection-line {
+  transition: all 0.3s ease-in-out;
+}
+
+.connection-line:hover {
+  opacity: 1 !important;
+  stroke-width: 4px;
+}
+
+.pulse-ring {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* Neural Network Theme Colors */
+:root {
+  --neural-primary: #2196F3;
+  --neural-secondary: #1976D2;
+  --neural-success: #4CAF50;
+  --neural-error: #f44336;
+  --neural-neuron: #e0e0e0;
+  --neural-connection: #9e9e9e;
+}
